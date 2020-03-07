@@ -1,0 +1,11 @@
+#DOM-Measure-Extension-Canvas-Wrapper {
+  width: 100vw;
+  height: 100vh;
+  box-sizing: border-box;
+  margin: 0px;
+  padding: 0px;
+  position: fixed;
+  top: 0px;
+  left: 0px;
+  pointer-events: none;
+}
