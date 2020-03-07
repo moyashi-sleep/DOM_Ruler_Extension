@@ -1,0 +1,24 @@
+{
+  "manifest_version": 2,
+  "name": "DOM Measure Extension",
+  "version": "0.1",
+  "description": "This extension measures the distance between DOM elements.",
+
+  "browser_action": {
+    "default_popup": "popup.html"
+  },
+
+  "content_scripts": [
+    {
+      "matches": [
+        "http://*/*",
+        "https://*/*"
+      ],
+      "css": [],
+      "js": [
+        "jquery-3.4.1.min.js",
+        "contentScript.js"
+      ]
+    }
+  ]
+}
