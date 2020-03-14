@@ -106,35 +106,6 @@ function isContained(outer, inner) {
   );
 }
 
-/*
-function drawRuler(a, b) {
-  let startX = (a.left + a.right) / 2 - window.scrollX;
-  let endX = (a.left + a.right) / 2 - window.scrollX;
-  let startY = a.top - window.scrollY;
-  let endY = b.top - window.scrollY;
-  if (a.top - b.top > 0) {
-    drawLine(startX, startY, endX, endY);
-  }
-  startY = a.bottom - window.scrollY;
-  endY = b.bottom - window.scrollY;
-  if (b.bottom - a.bottom > 0) {
-    drawLine(startX, startY, endX, endY);
-  }
-  startX = a.left - window.scrollX;
-  endX = b.left - window.scrollX;
-  startY = (a.top + a.bottom) / 2 - window.scrollY;
-  endY = (a.top + a.bottom) / 2 - window.scrollY;
-  if (a.left - b.left > 0) {
-    drawLine(startX, startY, endX, endY);
-  }
-  startX = a.right - window.scrollX;
-  endX = b.right - window.scrollX;
-  if (b.right - a.right > 0) {
-    drawLine(startX, startY, endX, endY);
-  }
-}
-*/
-
 function updateRuler(a, b) {
   rulerList.splice(0, rulerList.length);
   pushLine(rulerList, (a.offset.left + a.offset.right) / 2, a.offset.top, (a.offset.left + a.offset.right) / 2, b.offset.top);
