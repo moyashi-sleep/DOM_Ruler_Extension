@@ -1,6 +1,6 @@
 {
   "manifest_version": 2,
-  "name": "DOM Measure Extension",
+  "name": "DOM Ruler Extension",
   "version": "0.1",
   "description": "This extension measures the distance between DOM elements.",
 
