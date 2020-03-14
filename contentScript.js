@@ -1,97 +1,182 @@
 
-const canvas = $("<canvas>").attr("id", "DOM-Measure-Extension-Canvas");
-const canvasWrapper = $("<div>").attr("id", "DOM-Measure-Extension-Canvas-Wrapper");
-const context = canvas.get(0).getContext("2d");
+const canvas = document.createElement("canvas");
+canvas.setAttribute("id", "DOM-Measure-Extension-Canvas");
+const canvasWrapper = document.createElement("div");
+canvasWrapper.setAttribute("id", "DOM-Measure-Extension-Canvas-Wrapper");
+const context = canvas.getContext("2d");
+
+let base, target;
+let rulerList = [], guideList = [];
+
+function Rect(element) {
+  const rectObject = element.getBoundingClientRect();
+  this.offset = {
+    top: rectObject.top + window.scrollY,
+    right: rectObject.right + window.scrollX,
+    bottom: rectObject.bottom + window.scrollY,
+    left: rectObject.left + window.scrollX,
+  };
+}
+
+Rect.prototype = {
+  calcArea: function () {
+    // 面積を計算する
+    return (this.offset.right - this.offset.left) * (this.offset.bottom - this.offset.top);
+  },
+};
 
 // popupからのメッセージを受信したとき
 chrome.runtime.onMessage.addListener(function(message, sender, sendResponse) {
   console.log(message.isEnabled);
   if (message.isEnabled) {
     // canvas要素を追加する
-    $("body").prepend(canvasWrapper.append(canvas));
-    canvas.attr({"width": canvasWrapper.width(), "height": canvasWrapper.height()});
+    canvasWrapper.appendChild(canvas);
+    document.body.appendChild(canvasWrapper);
+    canvas.setAttribute("width", canvasWrapper.offsetWidth);
+    canvas.setAttribute("height", canvasWrapper.offsetHeight);
     // クリック時のイベントハンドラを登録する
-    activateEventListener();
+    window.addEventListener("click", onClick, false);
+    window.addEventListener("scroll", onScroll, false);
   } else {
     // canvas要素を削除する
     // イベントハンドラを削除する
-    $(window).off("click mouseenter");
+    window.removeEventListener("click", onClick, false);
+    window.removeEventListener("mouseover", onMouseEnter, false);
+    window.removeEventListener("scroll", onScroll, false);
   }
 });
 
-function activateEventListener() {
-  $(window).on("click", function (clickEvent) {
-    // クリックした座標から要素を取得する
-    const $base = $(document.elementFromPoint(clickEvent.clientX, clickEvent.clientY));
-    // 取得した要素の四辺の座標を取得する
-    const basePoint = {
-      top: $base.offset().top,
-      right: $base.offset().left + $base.outerWidth(),
-      bottom: $base.offset().top + $base.outerHeight(),
-      left: $base.offset().left,
-    };
+function onClick(event) {
+  // クリックした座標から要素を取得する
+  base = new Rect(document.elementFromPoint(event.clientX, event.clientY));
+  console.log("base", base.offset);
 
-    console.log("base", basePoint);
+  window.addEventListener("mouseover", onMouseEnter, false);
+}
 
-    $(window).on({
-      mouseenter: function (hoverEvent) {
-        // ホバーした要素の座標を取得する
-        const $target = $(document.elementFromPoint(hoverEvent.clientX, hoverEvent.clientY));
-        const targetPoint = {
-          top: $target.offset().top,
-          right: $target.offset().left + $target.outerWidth(),
-          bottom: $target.offset().top + $target.outerHeight(),
-          left: $target.offset().left,
-        }
+function onMouseEnter(event) {
+  // ホバーした座標から要素を取得する
+  target = new Rect(document.elementFromPoint(event.clientX, event.clientY));
+  console.log("target", target.offset);
 
-        console.log("target", targetPoint);
+  updateCanvas();
+}
 
-        const distance = {};
-        // Bの右辺位置がAの左辺位置より小さかったら左確定、逆および上下も同様
-        // Bの右辺位置がAの左辺位置より大きかったら左辺との差で確定、逆も同様
-        // ターゲットが上に位置する場合
-        if (basePoint.top > targetPoint.bottom) {
-          distance.top = Math.abs(basePoint.top - targetPoint.bottom);
-          // BaseとTargetは接触しないので、上への線のみ
-          context.clearRect(0, 0, canvasWrapper.width(), canvasWrapper.height());
-          const x = (basePoint.left + basePoint.right) / 2 - window.scrollX;
-          const startY = basePoint.top - window.scrollY;
-          const endY = targetPoint.bottom - window.scrollY;
-          context.beginPath();
-          context.moveTo(x, startY);
-          context.lineTo(x, endY);
-          context.closePath();
-          context.stroke();
-        } else {
-          distance.top = basePoint.top - targetPoint.top > 0 ? basePoint.top - targetPoint.top : 0;
-        }
-        // ターゲットが下に位置する場合
-        if (basePoint.bottom < targetPoint.top) {
-          distance.bottom = Math.abs(basePoint.bottom - targetPoint.top);
-        } else {
-          distance.bottom = targetPoint.bottom - basePoint.bottom > 0 ? targetPoint.bottom - basePoint.bottom : 0;
-        }
-        // ターゲットが左に位置する場合
-        if (basePoint.left > targetPoint.right) {
-          distance.left = Math.abs(basePoint.left - targetPoint.right);
-        } else {
-          distance.left = basePoint.left - targetPoint.left > 0 ? basePoint.left - targetPoint.left : 0;
-        }
-        // ターゲットが右に位置する場合
-        if (basePoint.right < targetPoint.left) {
-          distance.right = Math.abs(basePoint.right - targetPoint.left);
-        } else {
-          distance.right = targetPoint.right - basePoint.right > 0 ? targetPoint.right - basePoint.right : 0;
-        }
-        console.log($target.get(0).tagName, distance);
-      },
-      mouseleave: function(hoverEvent) {
-        context.clearRect(0, 0, canvasWrapper.width(), canvasWrapper.height());
-      }
-    });
+function onScroll(event) {
+  // 再描画する
+}
+
+function updateCanvas() {
+  // 接触判定
+  if (isCollided()) {
+    const outer = base.calcArea() >= target.calcArea() ? base : target;
+    const inner = base.calcArea() < target.calcArea() ? base : target;
+    // 内包判定
+    if (isContained(outer, inner)) {
+      console.log("contained.");
+      // 内包される側を基点として線を描画する
+      updateRuler(inner, outer);
+    } else {
+      // 接触している
+      console.log("collided.");
+    }
+  } else {
+    // 接触していない
+    console.log("not collided.");
+
+    // 基点の軸が当たる
+    // 基点の軸が当たらず、他方の軸が当たる
+    // 基点、他方の軸が当たらず、基点の辺から伸ばす
+    // 基点の辺から伸ばす線が当たらない
+  }
+  // 再描画
+  drawRuler();
+}
+
+function isCollided() {
+  return target.offset.left < base.offset.right && base.offset.left < target.offset.right && target.offset.top < base.offset.bottom && base.offset.top < target.offset.bottom;
+}
+
+function isContained(outer, inner) {
+  return (
+    (outer.offset.top <= inner.offset.top && inner.offset.top <= outer.offset.bottom) &&
+    (outer.offset.top <= inner.offset.bottom && inner.offset.bottom <= outer.offset.bottom) &&
+    (outer.offset.left <= inner.offset.left && inner.offset.left <= outer.offset.right) &&
+    (outer.offset.left <= inner.offset.right && inner.offset.right <= outer.offset.right)
+  );
+}
+
+/*
+function drawRuler(a, b) {
+  let startX = (a.left + a.right) / 2 - window.scrollX;
+  let endX = (a.left + a.right) / 2 - window.scrollX;
+  let startY = a.top - window.scrollY;
+  let endY = b.top - window.scrollY;
+  if (a.top - b.top > 0) {
+    drawLine(startX, startY, endX, endY);
+  }
+  startY = a.bottom - window.scrollY;
+  endY = b.bottom - window.scrollY;
+  if (b.bottom - a.bottom > 0) {
+    drawLine(startX, startY, endX, endY);
+  }
+  startX = a.left - window.scrollX;
+  endX = b.left - window.scrollX;
+  startY = (a.top + a.bottom) / 2 - window.scrollY;
+  endY = (a.top + a.bottom) / 2 - window.scrollY;
+  if (a.left - b.left > 0) {
+    drawLine(startX, startY, endX, endY);
+  }
+  startX = a.right - window.scrollX;
+  endX = b.right - window.scrollX;
+  if (b.right - a.right > 0) {
+    drawLine(startX, startY, endX, endY);
+  }
+}
+*/
+
+function updateRuler(a, b) {
+  rulerList.splice(0, rulerList.length);
+  pushLine(rulerList, (a.offset.left + a.offset.right) / 2, a.offset.top, (a.offset.left + a.offset.right) / 2, b.offset.top);
+  pushLine(rulerList, (a.offset.left + a.offset.right) / 2, a.offset.bottom, (a.offset.left + a.offset.right) / 2, b.offset.bottom);
+  pushLine(rulerList, a.offset.left, (a.offset.top + a.offset.bottom) / 2, b.offset.left, (a.offset.top + a.offset.bottom) / 2);
+  pushLine(rulerList, a.offset.right, (a.offset.top + a.offset.bottom) / 2, b.offset.right, (a.offset.top + a.offset.bottom) / 2);
+}
+
+function pushLine(dest, startX, startY, endX, endY) {
+  if (!Array.isArray(dest)) {
+    return;
+  }
+
+  dest.push({
+    start: {
+      x: startX,
+      y: startY,
+    },
+    end: {
+      x: endX,
+      y: endY,
+    }
   });
+}
 
-  $(window).on("scroll", function() {
-    // 再描画する
+function drawRuler() {
+  context.clearRect(0, 0, canvasWrapper.offsetWidth, canvasWrapper.offsetHeight);
+  rulerList.forEach(function(ruler) {
+    drawLine(ruler.start.x, ruler.start.y, ruler.end.x, ruler.end.y);
   });
+}
+
+// 描画する際にscrollを考慮する(常にViewPortの左上を基準に描画する)
+function drawLine(startX, startY, endX, endY) {
+  // 1pxの線がぼやけないように描画座標を0.5ずらす
+  const isVertial = startX === endX ? true : false;
+  const extraX = isVertial ? 0.5 : 0;
+  const extraY = isVertial ? 0 : 0.5;
+  context.beginPath();
+  context.moveTo(startX + window.scrollX + extraX, startY + window.scrollY + extraY);
+  context.lineTo(endX + window.scrollX + extraX, endY + window.scrollY + extraY);
+  context.closePath();
+  context.stroke();
+  console.count("draw");
 }
