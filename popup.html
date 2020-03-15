@@ -1,10 +1,21 @@
 <!DOCTYPE html>
 <html>
   <head>
+    <meta charset="UTF-8">
     <title></title>
+    <link rel="stylesheet" href="popup.css">
   </head>
   <body>
-    <button id="ActiveToggle">start / stop</button>
+    <div class="bodyArea">
+      <div class="headerArea">DOM Ruler Extension</div>
+      <div class="switchArea">
+        <span>計測モード</span>
+        <div id="ActiveToggle" class="toggleSwitch-base">
+          <div class="toggleSwitch-handle"></div>
+        </div>
+      </div>
+      <div class="paletteArea"></div>
+    </div>
     <script src="popup.js"></script>
   </body>
 </html>

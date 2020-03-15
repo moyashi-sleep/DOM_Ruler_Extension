@@ -1,0 +1,78 @@
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+.bodyArea {
+  width: 200px;
+  height: 200px;
+  user-select: none;
+}
+
+.headerArea {
+  padding: 10px;
+}
+
+.switchArea {
+  display: flex;
+  flex-flow: row nowrap;
+  justify-content: space-between;
+  align-items: center;
+  position: relative;
+  padding: 10px;
+}
+
+.switchArea::before {
+  content: "";
+  width: calc(100% - 20px);
+  height: 1px;
+  background-color: silver;
+  position: absolute;
+  top: 0px;
+}
+
+.toggleSwitch-base {
+  width: 60px;
+  height: 30px;
+  border-radius: 15px;
+  background-color: silver;
+  position: relative;
+  transition: background-color 150ms ease 0ms;
+}
+
+.toggleSwitch-base.status-on {
+  background-color: mediumseagreen;
+}
+
+.toggleSwitch-handle {
+  width: 30px;
+  height: 30px;
+  border: 2px solid silver;
+  border-radius: 15px;
+  background-color: white;
+  position: absolute;
+  left: 0px;
+  transition-property: left, border-color;
+  transition-duration: 150ms;
+  transition-timing-function: ease;
+}
+
+.status-on .toggleSwitch-handle {
+  left: 30px;
+  border-color: mediumseagreen;
+}
+
+.paletteArea {
+  position: relative;
+  padding: 10px;
+}
+
+.paletteArea::before {
+  content: "";
+  width: calc(100% - 20px);
+  height: 1px;
+  background-color: silver;
+  position: absolute;
+  top: 0px;
+}

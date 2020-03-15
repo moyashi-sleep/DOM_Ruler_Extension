@@ -1,4 +1,4 @@
-
+let isEnabled = false;
 const canvas = document.createElement("canvas");
 canvas.setAttribute("id", "DOM-Measure-Extension-Canvas");
 const canvasWrapper = document.createElement("div");
@@ -32,22 +32,34 @@ Rect.prototype = {
 
 // popupからのメッセージを受信したとき
 chrome.runtime.onMessage.addListener(function(message, sender, sendResponse) {
-  console.log(message.isEnabled);
-  if (message.isEnabled) {
-    // canvas要素を追加する
-    canvasWrapper.appendChild(canvas);
-    document.body.appendChild(canvasWrapper);
-    canvas.setAttribute("width", canvasWrapper.offsetWidth);
-    canvas.setAttribute("height", canvasWrapper.offsetHeight);
-    // クリック時のイベントハンドラを登録する
-    window.addEventListener("click", onClick, false);
-    window.addEventListener("scroll", onScroll, false);
-  } else {
-    // canvas要素を削除する
-    // イベントハンドラを削除する
-    window.removeEventListener("click", onClick, false);
-    window.removeEventListener("mouseover", onMouseEnter, false);
-    window.removeEventListener("scroll", onScroll, false);
+  switch (message.type) {
+    case "TOGGLE_ENABLE":
+      isEnabled = isEnabled ? false : true;
+      console.log(isEnabled);
+      if (isEnabled) {
+        // canvas要素を追加する
+        canvasWrapper.appendChild(canvas);
+        document.body.appendChild(canvasWrapper);
+        canvas.setAttribute("width", canvasWrapper.offsetWidth);
+        canvas.setAttribute("height", canvasWrapper.offsetHeight);
+        // クリック時のイベントハンドラを登録する
+        window.addEventListener("click", onClick, false);
+        window.addEventListener("scroll", onScroll, false);
+      } else {
+        // canvas要素を削除する
+        canvasWrapper.remove();
+        // イベントハンドラを削除する
+        window.removeEventListener("click", onClick, false);
+        window.removeEventListener("mouseover", onMouseEnter, false);
+        window.removeEventListener("scroll", onScroll, false);
+      }
+      sendResponse(isEnabled);
+      break;
+    case "GET_ENABLE":
+      sendResponse(isEnabled);
+      break;
+    default:
+      break;
   }
 });
 
@@ -73,6 +85,9 @@ function onMouseEnter(event) {
 
 function onScroll(event) {
   // 再描画する
+  context.clearRect(0, 0, canvasWrapper.offsetWidth, canvasWrapper.offsetHeight);
+  drawRuler();
+  drawGuide();
 }
 
 function updateCanvas() {
@@ -203,7 +218,7 @@ function drawRuler() {
     drawLine(ruler.start.x, ruler.start.y, ruler.end.x, ruler.end.y, isVertial);
     const distance = isVertial ? Math.abs(ruler.start.y - ruler.end.y) : Math.abs(ruler.start.x - ruler.end.x);
     context.font = "12px sans-serif";
-    context.fillText("" + distance, (isVertial ? ruler.start.x : (ruler.start.x + ruler.end.x) / 2), (isVertial ? (ruler.start.y + ruler.end.y) / 2 : ruler.start.y));
+    context.fillText("" + distance, (isVertial ? ruler.start.x : (ruler.start.x + ruler.end.x) / 2) - window.scrollX, (isVertial ? (ruler.start.y + ruler.end.y) / 2 : ruler.start.y) - window.scrollY);
   });
 }
 
@@ -220,7 +235,7 @@ function drawLine(startX, startY, endX, endY, isVertial) {
   const extraX = isVertial ? 0.5 : 0;
   const extraY = isVertial ? 0 : 0.5;
   context.beginPath();
-  context.moveTo(startX + window.scrollX + extraX, startY + window.scrollY + extraY);
-  context.lineTo(endX + window.scrollX + extraX, endY + window.scrollY + extraY);
+  context.moveTo(startX - window.scrollX + extraX, startY - window.scrollY + extraY);
+  context.lineTo(endX - window.scrollX + extraX, endY - window.scrollY + extraY);
   context.stroke();
 }
