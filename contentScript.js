@@ -9,6 +9,7 @@ let base, target;
 let rulerList = [], guideList = [];
 
 function Rect(element) {
+  this.element = element;
   const rectObject = element.getBoundingClientRect();
   this.offset = {
     top: rectObject.top + window.scrollY,
@@ -63,7 +64,11 @@ function onMouseEnter(event) {
   target = new Rect(document.elementFromPoint(event.clientX, event.clientY));
   console.log("target", target.offset);
 
-  updateCanvas();
+  if (base.element === target.element) {
+    context.clearRect(0, 0, canvasWrapper.offsetWidth, canvasWrapper.offsetHeight);
+  } else {
+    updateCanvas();
+  }
 }
 
 function onScroll(event) {
@@ -194,7 +199,11 @@ function pushLine(dest, startX, startY, endX, endY) {
 function drawRuler() {
   context.setLineDash([]);
   rulerList.forEach(function (ruler) {
-    drawLine(ruler.start.x, ruler.start.y, ruler.end.x, ruler.end.y);
+    const isVertial = ruler.start.x === ruler.end.x ? true : false;
+    drawLine(ruler.start.x, ruler.start.y, ruler.end.x, ruler.end.y, isVertial);
+    const distance = isVertial ? Math.abs(ruler.start.y - ruler.end.y) : Math.abs(ruler.start.x - ruler.end.x);
+    context.font = "12px sans-serif";
+    context.fillText("" + distance, (isVertial ? ruler.start.x : (ruler.start.x + ruler.end.x) / 2), (isVertial ? (ruler.start.y + ruler.end.y) / 2 : ruler.start.y));
   });
 }
 
@@ -206,9 +215,8 @@ function drawGuide() {
 }
 
 // 描画する際にscrollを考慮する(常にViewPortの左上を基準に描画する)
-function drawLine(startX, startY, endX, endY) {
+function drawLine(startX, startY, endX, endY, isVertial) {
   // 1pxの線がぼやけないように描画座標を0.5ずらす
-  const isVertial = startX === endX ? true : false;
   const extraX = isVertial ? 0.5 : 0;
   const extraY = isVertial ? 0 : 0.5;
   context.beginPath();
